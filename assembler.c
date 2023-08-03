@@ -60,7 +60,7 @@ void replace_bits(short int *x, int start, int end, short y) {
 }
 
 
-short int element_type(const char* str){
+short int element_type(char* str){
 
     if (str[0] == '@') {
             return 5;
@@ -88,7 +88,7 @@ short get_opcode_index(const char *opcode) {
 short element_number(const char* str) {
     if (str[0] == '@') {
         // The string starts with '@', so we return the last character as a number.
-        return (short)str[3];
+        return (short)str[2];
     }
     else if (isdigit(str[0])) {
         // The string is a number, so we convert it to a short int and return it.
@@ -107,9 +107,10 @@ short element_number(const char* str) {
 }
 
 
-
 void parse_elements(const char *opcode, const char *element1, const char *element2, int code_type) {
 
+    printf("new line ! \n");
+    printf("%s %s %s \n", opcode, element1, element2);
     short int num = 0;
     short int element1_number = 0;
     short int element2_number = 0;
@@ -134,21 +135,24 @@ void parse_elements(const char *opcode, const char *element1, const char *elemen
     replace_bits(&num,9,11,element1_type);
     print_bits(num);
 
-    if(element1_number != 0){
-        short int num1 = 0;
-        replace_bits(&num1, 2, 11, element1_number);
-        print_bits(num1);
+    if (element1_type == 5 && element2_type == 5){
+        short int num3 = 0;
+        replace_bits(&num3, 2, 6, element1_number);
+        replace_bits(&num3, 7, 11, element2_number);
+        print_bits(num3);
     }
-    if(element2_number != 0){
-        short int num2 = 0;
-        replace_bits(&num2, 2, 11, element2_number);
-        print_bits(num2);
+    else{
+        if(element1_number != 0){
+            short int num1 = 0;
+            replace_bits(&num1, 2, 11, element1_number);
+            print_bits(num1);
+        }
+        if(element2_number != 0){
+            short int num2 = 0;
+            replace_bits(&num2, 2, 11, element2_number);
+            print_bits(num2);
+        }
     }
-
-
-
-
-
 
 }
 
