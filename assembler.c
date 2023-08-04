@@ -6,6 +6,7 @@
 #include "assembler.h"
 
 
+
 void print_bits(short num) {
     int size = sizeof(num) * 8;  // Calculate the number of bits in num
     for(int i = size - 1; i >= 0; i--) {
@@ -72,6 +73,14 @@ short int element_type(char* str){
     }
 }
 
+void remove_spaces_and_tabs(char *str) {
+    int count = 0;
+    for (int i = 0; str[i]; i++)
+        if (str[i] != ' ' && str[i] != '\t')
+            str[count++] = str[i]; // Here count is incremented
+    str[count] = '\0';
+}
+
 
 short get_opcode_index(const char *opcode) {
     int num_opcodes = sizeof(*opcodes) / sizeof(*opcodes[0]);
@@ -88,7 +97,7 @@ short get_opcode_index(const char *opcode) {
 short element_number(const char* str) {
     if (str[0] == '@') {
         // The string starts with '@', so we return the last character as a number.
-        return (short)str[2];
+        return (short)atoi(str + 2);
     }
     else if (isdigit(str[0])) {
         // The string is a number, so we convert it to a short int and return it.
@@ -107,9 +116,64 @@ short element_number(const char* str) {
 }
 
 
+void add_code(short int* num){
+    if(codes_count == LIST_LENGTH){
+        printf("codes array is full! \n");
+    }else{
+        codes[codes_count] = *num;
+        codes_count ++;
+        printf("add code line! \n");
+    }
+    print_bits(codes[codes_count-1]);
+}
+
+
+void add_to_variables(short int num) {
+    if(variables_count == LIST_LENGTH){
+        printf("variables array is full! \n");
+    }else{
+        variables[variables_count] = num;
+        variables_count ++;
+        printf("add variable! \n");
+    }
+    print_bits(variables[variables_count-1]);
+}
+
+
+void data_parser(char *data) {
+    // Split the string at each comma
+    char *num_str = strtok(data, ",");
+    while (num_str != NULL) {
+        // Convert the number string to an integer
+        int num = atoi(num_str);
+        // Convert the integer to a short int and add it to the variables list
+        add_to_variables((short) num);
+
+        // Get the next number string
+        num_str = strtok(NULL, ",");
+    }
+}
+
+
+
+void string_parser(char *str) {
+    // Remove the quotes from the string
+    char* trimmed_str = strtok(str, "\"");
+
+    // Iterate over each character in the string
+    for (int i = 0; i < strlen(trimmed_str); i++) {
+        // Convert the character to its ASCII value
+        short ascii_val = (short) trimmed_str[i];
+        // Call the add_string function with the ASCII value
+        add_to_variables(ascii_val);
+    }
+}
+
+
+
 void parse_elements(const char *opcode, const char *element1, const char *element2, int code_type) {
 
-    printf("new line ! \n");
+    printf("new line from the file! \n");
     printf("%s %s %s \n", opcode, element1, element2);
     short int num = 0;
     short int element1_number = 0;
@@ -133,28 +197,30 @@ void parse_elements(const char *opcode, const char *element1, const char *elemen
     replace_bits(&num,2,4,element2_type);
     replace_bits(&num,5,8,opcode_type);
     replace_bits(&num,9,11,element1_type);
-    print_bits(num);
+    add_code(&num);
+
 
     if (element1_type == 5 && element2_type == 5){
         short int num3 = 0;
-        replace_bits(&num3, 2, 6, element1_number);
-        replace_bits(&num3, 7, 11, element2_number);
-        print_bits(num3);
+        replace_bits(&num3, 2, 6, element2_number);
+        replace_bits(&num3, 7, 11, element1_number);
+        add_code(&num3);
     }
     else{
         if(element1_number != 0){
             short int num1 = 0;
             replace_bits(&num1, 2, 11, element1_number);
-            print_bits(num1);
+            add_code(&num1);
         }
         if(element2_number != 0){
             short int num2 = 0;
             replace_bits(&num2, 2, 11, element2_number);
-            print_bits(num2);
+            add_code(&num2);
         }
     }
 
 }
+
 
 void process_am_file(const char* filename) {
     FILE *file;
@@ -170,6 +236,9 @@ void process_am_file(const char* filename) {
     while(fgets(line, sizeof(line), file)) {
         char *word = strtok(line, " ");
         while (word != NULL) {
+            remove_spaces_and_tabs(word);  // Remove spaces and tabs
+
+            // Labels handling
             if (is_all_uppercase(word) && word[strlen(word) - 1] == ':') {
                 printf("added label %s \n",word);
                 add_label(word, row + 100);
@@ -177,8 +246,21 @@ void process_am_file(const char* filename) {
                 word = strtok(NULL, " ");
             }
 
-            // Now 'word' should contain the opcode
-            if (islower(word[0]) && get_opcode(word) != -1) {
+            if (strcmp(word, ".data") == 0) {
+                // If the word is ".data", call the data_parser function
+                word = strtok(NULL, ",");
+                data_parser(word);
+                word = strtok(NULL, ",");
+            }
+            else if (strcmp(word, ".string") == 0) {
+                // If the word is ".string", call the string_parser function
+                word = strtok(NULL, ",");
+                string_parser(word);
+                word = strtok(NULL, ",");
+            }
+
+                // Codes handler
+            else if (islower(word[0]) && get_opcode(word) != -1) {
                 // Get the elements after the opcode
                 char *element1 = strtok(NULL, ",");
                 if (element1 == NULL) {
@@ -191,8 +273,8 @@ void process_am_file(const char* filename) {
 
                 // Parse the elements
                 parse_elements(word, element1, element2,  0);
+                word = strtok(NULL, " ");
             }
-            word = strtok(NULL, " ");
         }
         row++;
     }

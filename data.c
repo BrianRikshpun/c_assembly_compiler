@@ -2,8 +2,8 @@
 #include <string.h>
 #include "data.h"
 
-short codes[50];
-short variables[50];
+short codes[LIST_LENGTH];
+short variables[LIST_LENGTH];
 
 Labels labels = {NULL, NULL, 0, 0};
 Externals externals = {NULL, 0, 0};
@@ -11,6 +11,8 @@ Internals internals = {NULL, 0, 0};
 
 char* opcodes[] = {"mov", "cmp", "add", "sub", "not", "clr", "lea", "inc", "dec", "jmp", "bne", "red", "prn", "jsr", "rts", "stop"};
 int num_opcodes = sizeof(opcodes) / sizeof(opcodes[0]);
+int codes_count = 0;
+int variables_count = 0;
 
 void allocate_labels() {
     labels.array = (char**) malloc(sizeof(char*));

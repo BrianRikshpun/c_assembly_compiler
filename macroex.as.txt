@@ -1,8 +1,8 @@
-add @r5,@r2
 MAIN: mov 23,@r5
+add @r5,@r2
 jmp MAIN
 . data 7,10
-.string ABC
+.string "ABC"
 stop
 LOOP: jmp L1
 mcro m1
