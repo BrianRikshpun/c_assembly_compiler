@@ -1,8 +1,10 @@
+.entry LENGTH
+.extern W
 MAIN: mov 23,@r5
 add @r5,@r2
 jmp MAIN
-. data 7,10
-.string "ABC"
+X: .data 7,10
+Y: .string "ABC"
 mcro m1
 sub @r1,@r4
 bne END

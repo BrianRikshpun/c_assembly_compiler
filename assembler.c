@@ -16,6 +16,27 @@ void print_bits(short num) {
 }
 
 
+void print_labels() {
+    printf("Labels:\n");
+    for (int i = 0; i < labels.size; i++) {
+        printf("  Label: %s, Row ID: %d\n", labels.array[i], labels.row_ids[i]);
+    }
+}
+
+void print_externals() {
+    printf("Externals:\n");
+    for (int i = 0; i < externals.size; i++) {
+        printf("  External: %s, Row ID: %d\n", externals.array[i], externals.row_ids[i]);
+    }
+}
+
+void print_entries() {
+    printf("Entries:\n");
+    for (int i = 0; i < internals.size; i++) {
+        printf("  Entry: %s, Row ID: %d\n", internals.array[i], internals.row_ids[i]);
+    }
+}
+
 char* remove_newline(char* str) {
     size_t len = strlen(str);
     if (len > 0 && str[len - 1] == '\n') {
@@ -140,14 +161,34 @@ void add_to_variables(short int num) {
     }else{
         variables[variables_count] = num;
         variables_count ++;
-        printf("add variable! \n");
+        printf("added variable! \n");
     }
     print_bits(variables[variables_count-1]);
 }
 
 
+// Function to add an external variable
+void add_extern(const char *external, int line_number) {
+    externals.array[externals.size] = (char *)malloc((strlen(external) + 1) * sizeof(char));
+    strcpy(externals.array[externals.size], external);
+    externals.row_ids[externals.size] = line_number;
+    externals.size++;
+}
+
+// Function to add an entry variable
+void add_entry(const char *entry, int line_number) {
+    internals.array[internals.size] = (char *)malloc((strlen(entry) + 1) * sizeof(char));
+    strcpy(internals.array[internals.size], entry);
+    internals.row_ids[internals.size] = line_number;
+    internals.size++;
+}
+
+
 void data_parser(char *data) {
     // Split the string at each comma
+    if(data[strlen(data) - 1] == '\n'){
+        data[strlen(data) - 1] = '\0';
+    }
     char *num_str = strtok(data, ",");
     while (num_str != NULL) {
         // Convert the number string to an integer
@@ -160,8 +201,6 @@ void data_parser(char *data) {
     }
 }
 
-
-
 void string_parser(char *str) {
     // Remove the quotes from the string
     char* trimmed_str = strtok(str, "\"");
@@ -173,6 +212,8 @@ void string_parser(char *str) {
         // Call the add_string function with the ASCII value
         add_to_variables(ascii_val);
     }
+    // null
+    add_to_variables(0);
 }
 
 
@@ -256,8 +297,8 @@ void parse_elements(const char *opcode, const char *element1, const char *elemen
             }
         }
     }
-
 }
+
 
 void process_am_file(const char* filename) {
     FILE *file;
@@ -270,7 +311,7 @@ void process_am_file(const char* filename) {
         return;
     }
 
-    int row = 0;
+    int row = 100;
     while(fgets(line, sizeof(line), file)) {
         temp_line = line;
         char *word = strtok(temp_line, " ");
@@ -278,14 +319,34 @@ void process_am_file(const char* filename) {
             // Removing '\n' from the end of the word if it exists
             word[strcspn(word, "\n")] = 0;
 
+            if (strcmp(word, ".extern") == 0) {
+                word = strtok(NULL, " ");
+                add_extern(word, row);
+            } else if (strcmp(word, ".entry") == 0) {
+                word = strtok(NULL, " ");
+                add_entry(word, row);
+            }
+
+            if (word == NULL) {
+                // There were no more words on the line after the label
+                break;
+            }
+
             // Labels handling
             if (is_all_uppercase(word) && word[strlen(word) - 1] == ':') {
-                word[strlen(word) - 1] = '\0';
+                if(word[strlen(word) - 1] == '\n'){
+                    word[strlen(word) - 1] = '\0';
+                }
+
                 printf("added label %s \n",word);
-                add_label(word, row + 100);
+                add_label(word, row);
                 word = strtok(NULL, " ");  // Get the next word
             }
 
+            if (word == NULL) {
+                // There were no more words on the line after the label
+                break;
+            }
 
             if (strcmp(word, ".data") == 0) {
                 // If the word is ".data", call the data_parser function
@@ -293,11 +354,22 @@ void process_am_file(const char* filename) {
                 data_parser(word);
                 word = strtok(NULL, " ");
             }
+
+            if (word == NULL) {
+                // There were no more words on the line after the label
+                break;
+            }
+
             if (strcmp(word, ".string") == 0) {
                 // If the word is ".string", call the string_parser function
                 word = strtok(NULL, " ");
                 string_parser(word);
                 word = strtok(NULL, " ");
+            }
+
+            if (word == NULL) {
+                // There were no more words on the line after the label
+                break;
             }
 
             if (islower(word[0]) && get_opcode(word) != -1) {
@@ -311,16 +383,14 @@ void process_am_file(const char* filename) {
                 parse_elements(word, element1, element2,  0);
             }
 
-            if (word == NULL) {
-                // There were no more words on the line after the label
-                break;
-            }
-
-
             word = strtok(NULL, " ");
+
         }
         row++;
     }
+    print_entries();
+    print_externals();
+    print_labels();
 
     fclose(file);
 }
