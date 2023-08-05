@@ -7,7 +7,7 @@
 
 int ends_with_as(const char *filename) {
     int len = strlen(filename);
-    return len > 7 && strcmp(filename + len - 7, ".as.txt") == 0;
+    return len > 3 && strcmp(filename + len - 3, ".as") == 0;
 }
 
 void print_codes() {
@@ -25,9 +25,10 @@ int main(int argc, char *argv[]) {
     allocate_externals();
     allocate_internals();
 
+
     for(int i = 1; i < argc; i++) {
         if (!ends_with_as(argv[i])) {
-            printf("File %s does not end with .as.txt\n", argv[i]);
+            printf("File %s does not end with .as\n", argv[i]);
             continue;
         }
 
@@ -38,8 +39,9 @@ int main(int argc, char *argv[]) {
         }
 
         char output_filename[100];
+
         strcpy(output_filename, argv[i]);
-        output_filename[strlen(argv[i]) - 7] = '\0';
+        output_filename[strlen(argv[i]) - 3] = '\0';
         strcat(output_filename, ".am");
 
         output_file = fopen(output_filename, "w");
@@ -58,7 +60,10 @@ int main(int argc, char *argv[]) {
 
         process_am_file(output_filename);
 
+
+
         // Open .ob file for writing
+        output_filename[strlen(output_filename) - 3] = '\0';
         strcat(output_filename, ".ob");
         output_file = fopen(output_filename, "w");
         if (output_file == NULL) {
@@ -102,7 +107,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Write to .ent file
-
+        output_filename[strlen(output_filename) - 3] = '\0';
         strcat(output_filename, ".ent");
         FILE *ent_file = fopen(output_filename, "w");
         if (ent_file != NULL) {
@@ -113,6 +118,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Write to .ext file
+        output_filename[strlen(output_filename) - 4] = '\0';
         strcat(output_filename, ".ext");
         FILE *ext_file = fopen(output_filename, "w");
         if (ext_file != NULL) {
@@ -120,9 +126,8 @@ int main(int argc, char *argv[]) {
                 fprintf(ext_file, "%s %d\n", externals.array[j], externals.row_ids[j]);
             }
             fclose(ext_file);
-
-
             fclose(output_file);
+
         }
     }
     //print_codes();
