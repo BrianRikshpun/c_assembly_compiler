@@ -3,6 +3,7 @@
 
 #define MAX_LABEL_LENGTH 50
 #define LIST_LENGTH 100
+#define NUM_OPCODES 16
 
 typedef struct {
     char** array;

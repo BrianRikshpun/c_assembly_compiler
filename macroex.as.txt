@@ -3,9 +3,9 @@ add @r5,@r2
 jmp MAIN
 . data 7,10
 .string "ABC"
-stop
-LOOP: jmp L1
 mcro m1
 sub @r1,@r4
 bne END
 endmcro
+LOOP: jmp L1
+stop

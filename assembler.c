@@ -16,6 +16,14 @@ void print_bits(short num) {
 }
 
 
+char* remove_newline(char* str) {
+    size_t len = strlen(str);
+    if (len > 0 && str[len - 1] == '\n') {
+        str[len - 1] = '\0';
+    }
+    return str;
+}
+
 int is_all_uppercase(const char *str) {
     for (int i = 0; str[i]; i++) {
         if (!isupper(str[i]) && str[i] != ':') {
@@ -83,8 +91,7 @@ void remove_spaces_and_tabs(char *str) {
 
 
 short get_opcode_index(const char *opcode) {
-    int num_opcodes = sizeof(*opcodes) / sizeof(*opcodes[0]);
-    for (short i = 0; i < num_opcodes; i++) {
+    for (short i = 0; i < NUM_OPCODES; i++) {
         if (strcmp(opcode, opcodes[i]) == 0) {
             return i;
         }
@@ -92,7 +99,6 @@ short get_opcode_index(const char *opcode) {
     printf("Opcode not found: %s\n", opcode);
     return -1;
 }
-
 
 short element_number(const char* str) {
     if (str[0] == '@') {
@@ -170,61 +176,93 @@ void string_parser(char *str) {
 }
 
 
+short find_row_id_for_label(const char* label) {
+    for (int i = 0; i < labels.size; i++) {
+        if (strcmp(labels.array[i], label) == 0) {
+            return labels.row_ids[i];
+        }
+    }
+    // Return -1 if the label is not found
+    return -1;
+}
+
 
 void parse_elements(const char *opcode, const char *element1, const char *element2, int code_type) {
 
+    opcode = remove_newline(opcode);
+    element1 = remove_newline(element1);
+    element2 = remove_newline(element2);
+
     printf("new line from the file! \n");
-    printf("%s %s %s \n", opcode, element1, element2);
-    short int num = 0;
-    short int element1_number = 0;
-    short int element2_number = 0;
-
-    short int element1_type, element2_type, opcode_type;
-    if(element1 == 0)
-        element1_type = 0;
-    else
-        element1_type = element_type(element1);
-        element1_number = element_number(element1);
-    if(element2 == 0)
-        element2_type = 0;
-    else
-        element2_type = element_type(element2);
-        element2_number = element_number(element2);
-
-    opcode_type = get_opcode_index(opcode);
-
-    replace_bits(&num, 0,1,code_type);
-    replace_bits(&num,2,4,element2_type);
-    replace_bits(&num,5,8,opcode_type);
-    replace_bits(&num,9,11,element1_type);
-    add_code(&num);
+    printf("the parameters of the line are : %s %s %s \n", opcode, element1, element2);
 
 
-    if (element1_type == 5 && element2_type == 5){
-        short int num3 = 0;
-        replace_bits(&num3, 2, 6, element2_number);
-        replace_bits(&num3, 7, 11, element1_number);
-        add_code(&num3);
+    if(strcmp(opcode, "stop") == 0){
+        short int num = 0;
+        replace_bits(&num, 0,3,0);
+        replace_bits(&num, 4,11,15);
+        add_code(&num);
     }
     else{
-        if(element1_number != 0){
-            short int num1 = 0;
-            replace_bits(&num1, 2, 11, element1_number);
-            add_code(&num1);
+        short int num = 0;
+        short int element1_number = 0;
+        short int element2_number = 0;
+
+        short int element1_type, element2_type, opcode_type;
+        if(element1 == 0)
+            element1_type = 0;
+        else
+            element1_type = element_type(element1);
+        element1_number = element_number(element1);
+        if(element2 == 0)
+            element2_type = 0;
+        else
+            element2_type = element_type(element2);
+        element2_number = element_number(element2);
+
+        opcode_type = get_opcode_index(opcode);
+
+        replace_bits(&num, 0,1,code_type);
+        replace_bits(&num,2,4,element2_type);
+        replace_bits(&num,5,8,opcode_type);
+        replace_bits(&num,9,11,element1_type);
+        add_code(&num);
+
+        if (element1_type == 5 && element2_type == 5){
+            short int num3 = 0;
+            replace_bits(&num3, 2, 6, element2_number);
+            replace_bits(&num3, 7, 11, element1_number);
+            add_code(&num3);
         }
-        if(element2_number != 0){
-            short int num2 = 0;
-            replace_bits(&num2, 2, 11, element2_number);
-            add_code(&num2);
+        else{
+            if(element1_number != 0){
+                short int num1 = 0;
+                //Label adding
+                if(is_all_uppercase(element1)){
+                    short int label_row_id = find_row_id_for_label(element1);
+                    replace_bits(&num1, 0,1,2);
+                    replace_bits(&num1,2,11,label_row_id);
+                    add_code(&num1);
+                }
+                else{
+                    replace_bits(&num1, 2, 11, element1_number);
+                    add_code(&num1);
+                }
+            }
+            if(element2_number != 0){
+                short int num2 = 0;
+                replace_bits(&num2, 2, 11, element2_number);
+                add_code(&num2);
+            }
         }
     }
 
 }
 
-
 void process_am_file(const char* filename) {
     FILE *file;
-    char line[100];
+    char line[LIST_LENGTH];
+    char *temp_line;
 
     file = fopen(filename, "r");
     if(file == NULL) {
@@ -234,47 +272,52 @@ void process_am_file(const char* filename) {
 
     int row = 0;
     while(fgets(line, sizeof(line), file)) {
-        char *word = strtok(line, " ");
+        temp_line = line;
+        char *word = strtok(temp_line, " ");
         while (word != NULL) {
-            remove_spaces_and_tabs(word);  // Remove spaces and tabs
+            // Removing '\n' from the end of the word if it exists
+            word[strcspn(word, "\n")] = 0;
 
             // Labels handling
             if (is_all_uppercase(word) && word[strlen(word) - 1] == ':') {
+                word[strlen(word) - 1] = '\0';
                 printf("added label %s \n",word);
                 add_label(word, row + 100);
-                // Once a label has been found, get the next word
-                word = strtok(NULL, " ");
+                word = strtok(NULL, " ");  // Get the next word
             }
+
 
             if (strcmp(word, ".data") == 0) {
                 // If the word is ".data", call the data_parser function
-                word = strtok(NULL, ",");
+                word = strtok(NULL, " ");
                 data_parser(word);
-                word = strtok(NULL, ",");
+                word = strtok(NULL, " ");
             }
-            else if (strcmp(word, ".string") == 0) {
+            if (strcmp(word, ".string") == 0) {
                 // If the word is ".string", call the string_parser function
-                word = strtok(NULL, ",");
+                word = strtok(NULL, " ");
                 string_parser(word);
-                word = strtok(NULL, ",");
+                word = strtok(NULL, " ");
             }
 
-                // Codes handler
-            else if (islower(word[0]) && get_opcode(word) != -1) {
+            if (islower(word[0]) && get_opcode(word) != -1) {
                 // Get the elements after the opcode
                 char *element1 = strtok(NULL, ",");
-                if (element1 == NULL) {
-                    element1 = "0";
-                }
+                element1 = (element1 != NULL) ? element1 : "0";
                 char *element2 = strtok(NULL, ",");
-                if (element2 == NULL) {
-                    element2 = "0";
-                }
+                element2 = (element2 != NULL) ? element2 : "0";
 
                 // Parse the elements
                 parse_elements(word, element1, element2,  0);
-                word = strtok(NULL, " ");
             }
+
+            if (word == NULL) {
+                // There were no more words on the line after the label
+                break;
+            }
+
+
+            word = strtok(NULL, " ");
         }
         row++;
     }

@@ -58,7 +58,8 @@ int main(int argc, char *argv[]) {
         process_am_file(output_filename);
     }
 
-    print_codes();
+    //print_codes();
+
     free_labels();
     free_externals();
     free_internals();

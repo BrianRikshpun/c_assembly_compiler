@@ -3,5 +3,5 @@ add @r5,@r2
 jmp MAIN
 . data 7,10
 .string "ABC"
-stop
 LOOP: jmp L1
+stop
